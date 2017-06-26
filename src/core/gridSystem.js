@@ -106,7 +106,7 @@ module.exports = function gridSystem(options) {
     },
 
     _setupGrid: function(bounds) {
-      this._origin = this._map.project(bounds.getNorthWest());
+      this._origin = this._map.project(L.latLng(0, 0));
       this._cellSize = this.options.cellSize;
       this._setupSize();
       this._loadedCells = [];
