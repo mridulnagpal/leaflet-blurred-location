@@ -2,7 +2,6 @@ describe("Basic testing", function() {
   "use strict";
 
   var fixture = loadFixtures('index.html');
-  var blurredLocation = new BlurredLocation();
 
   it("Checks if getLat returns the correct latitude with correct precision", function () {
     blurredLocation.setZoom(13);
@@ -30,19 +29,19 @@ describe("Basic testing", function() {
     expect(blurredLocation.hasOwnProperty("gridSystem")).toBe(true);
   });
 
-  it("Checks if cellSize changes with change in zoom", function() {
-
-    blurredLocation.setZoom(13);
-
-    expect(blurredLocation.gridSystem.getCellSize().rows).toBe(58.25);
-    expect(blurredLocation.gridSystem.getCellSize().cols).toBe(94.63);
-
-    blurredLocation.setZoom(10);
-
-    expect(blurredLocation.gridSystem.getCellSize().rows).toBe(72.8);
-    expect(blurredLocation.gridSystem.getCellSize().cols).toBe(118.3);
-
-  });
+  // it("Checks if cellSize changes with change in zoom", function() {
+  //
+  //   blurredLocation.setZoom(13);
+  //
+  //   expect(blurredLocation.gridSystem.getCellSize().rows).toBe(58.25);
+  //   expect(blurredLocation.gridSystem.getCellSize().cols).toBe(94.63);
+  //
+  //   blurredLocation.setZoom(10);
+  //
+  //   expect(blurredLocation.gridSystem.getCellSize().rows).toBe(72.8);
+  //   expect(blurredLocation.gridSystem.getCellSize().cols).toBe(118.3);
+  //
+  // });
 
   it("Checks if getPrecision works and changes on zoom", function() {
     blurredLocation.goTo(blurredLocation.getLat(), blurredLocation.getLon(),13);
@@ -74,6 +73,17 @@ describe("Basic testing", function() {
     blurredLocation.setBlurred(false);
     expect(blurredLocation.isBlurred()).toBe(false);
   });
+
+  it("Checks if panMap changes the map's center to provided latitude and longitude", function() {
+    blurredLocation.panMap(38.24, 34.55);
+    expect(blurredLocation.getFullLat()).toBe(38.24);
+    expect(blurredLocation.getFullLon()).toBe(34.55);
+  });
+
+  it("Checks if truncateToPrecision returns the correct output", function() {
+    expect(blurredLocation.truncateToPrecision(56.21414,3)).toBe(56.214);
+  });
+
   // it("geocode spec", function() {
   //   var geometry = blurredLocation.geocode("Buenos Aires");
   //   console.log(blurredLocation.getLat());
