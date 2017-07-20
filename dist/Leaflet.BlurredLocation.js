@@ -14157,7 +14157,6 @@ BlurredLocation = function BlurredLocation(options) {
   Interface = options.Interface(InterfaceOptions);
 
   var tileLayer = L.tileLayer("https://a.tiles.mapbox.com/v3/jywarren.map-lmrwb2em/{z}/{x}/{y}.png").addTo(options.map);
-
   // options.map.setView([options.location.lat, options.location.lon], options.zoom);
 
   function getLat() {
@@ -14173,6 +14172,7 @@ BlurredLocation = function BlurredLocation(options) {
     else
       return parseFloat(options.map.getCenter().lng);
   }
+
   function goTo(lat, lon, zoom) {
     options.map.setView([lat, lon], zoom);
   }
@@ -14181,19 +14181,15 @@ BlurredLocation = function BlurredLocation(options) {
     options.map.setZoom(zoom);
   }
 
-  function geocodeStringAndPan(string, onComplete) {
+  function geocode(string) {
     var url = "https://maps.googleapis.com/maps/api/geocode/json?address="+string.split(" ").join("+");
     var Blurred = $.ajax({
         async: false,
         url: url
     });
-    onComplete = onComplete || function onComplete(geometry) {
-      $("#lat").val(geometry.lat);
-      $("#lng").val(geometry.lng);
-
-      options.map.setView([geometry.lat, geometry.lng],options.zoom);
-    }
-    onComplete(Blurred.responseJSON.results[0].geometry.location);
+    var geometry = Blurred.responseJSON.results[0].geometry.location;
+    options.map.setView([geometry.lat, geometry.lng],options.zoom);
+    return geometry;
   }
 
   function getSize() {
@@ -14207,7 +14203,7 @@ BlurredLocation = function BlurredLocation(options) {
     autocomplete.addListener('place_changed', function() {
       setTimeout(function () {
         var str = input.value;
-        geocodeStringAndPan(str);
+        geocode(str);
       }, 10);
     });
   };
@@ -14298,11 +14294,28 @@ BlurredLocation = function BlurredLocation(options) {
     return blurred;
   }
 
+  var rectangle;
+
+  function drawCenterRectangle(bounds) {
+    if(rectangle) rectangle.remove()
+    rectangle = L.rectangle(bounds, {color: "#ff0000", weight: 1}).addTo(options.map);
+  }
+
+  function updateRectangleOnPan() {
+    var precision = getPrecision();
+    var interval = 1 / 10**precision;
+    var bounds = [[getLat(), getLon()], [getLat() + Math.sign(getLat())*interval, getLon() + Math.sign(getLon())*interval]];
+    drawCenterRectangle(bounds);
+  }
+
+  updateRectangleOnPan();
+  options.map.on('moveend', updateRectangleOnPan);
+
   return {
     getLat: getLat,
     getLon: getLon,
     goTo: goTo,
-    geocodeStringAndPan: geocodeStringAndPan,
+    geocode: geocode,
     getSize: getSize,
     gridSystem: gridSystem,
     panMapToGeocodedLocation: panMapToGeocodedLocation,
@@ -14320,6 +14333,7 @@ BlurredLocation = function BlurredLocation(options) {
     setBlurred: setBlurred,
     truncateToPrecision: truncateToPrecision,
     map: options.map,
+    updateRectangleOnPan: updateRectangleOnPan,
   }
 }
 
