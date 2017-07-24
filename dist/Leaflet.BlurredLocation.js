@@ -14172,7 +14172,6 @@ BlurredLocation = function BlurredLocation(options) {
     else
       return parseFloat(options.map.getCenter().lng);
   }
-
   function goTo(lat, lon, zoom) {
     options.map.setView([lat, lon], zoom);
   }
@@ -14181,15 +14180,19 @@ BlurredLocation = function BlurredLocation(options) {
     options.map.setZoom(zoom);
   }
 
-  function geocode(string) {
+  function geocodeStringAndPan(string, onComplete) {
     var url = "https://maps.googleapis.com/maps/api/geocode/json?address="+string.split(" ").join("+");
     var Blurred = $.ajax({
         async: false,
         url: url
     });
-    var geometry = Blurred.responseJSON.results[0].geometry.location;
-    options.map.setView([geometry.lat, geometry.lng],options.zoom);
-    return geometry;
+    onComplete = onComplete || function onComplete(geometry) {
+      $("#lat").val(geometry.lat);
+      $("#lng").val(geometry.lng);
+
+      options.map.setView([geometry.lat, geometry.lng],options.zoom);
+    }
+    onComplete(Blurred.responseJSON.results[0].geometry.location);
   }
 
   function getSize() {
@@ -14203,7 +14206,7 @@ BlurredLocation = function BlurredLocation(options) {
     autocomplete.addListener('place_changed', function() {
       setTimeout(function () {
         var str = input.value;
-        geocode(str);
+        geocodeStringAndPan(str);
       }, 10);
     });
   };
@@ -14297,25 +14300,41 @@ BlurredLocation = function BlurredLocation(options) {
   var rectangle;
 
   function drawCenterRectangle(bounds) {
-    if(rectangle) rectangle.remove()
+    if(rectangle) rectangle.remove();
     rectangle = L.rectangle(bounds, {color: "#ff0000", weight: 1}).addTo(options.map);
   }
 
   function updateRectangleOnPan() {
     var precision = getPrecision();
-    var interval = 1 / 10**precision;
-    var bounds = [[getLat(), getLon()], [getLat() + Math.sign(getLat())*interval, getLon() + Math.sign(getLon())*interval]];
+    var interval = Math.pow(10,-precision);
+    var bounds = [[getLat(), getLon()], [getLat() + (getLat()/Math.abs(getLat()))*interval, getLon() + (getLon()/Math.abs(getLon()))*interval]];
+
     drawCenterRectangle(bounds);
   }
 
-  updateRectangleOnPan();
-  options.map.on('moveend', updateRectangleOnPan);
+
+  function setZoomByPrecision(precision) {
+    var precisionTable = {'-2': 2, '-1': 3, '0':6, '1':10, '2':13, '3':16};
+    setZoom(precisionTable[precision]);
+  }
+
+  function enableCenterShade() {
+    updateRectangleOnPan();
+    options.map.on('moveend', updateRectangleOnPan);
+  }
+
+  function disableCenterShade() {
+    if(rectangle) rectangle.remove();
+    options.map.off('moveend',updateRectangleOnPan);
+  }
+
+  enableCenterShade();
 
   return {
     getLat: getLat,
     getLon: getLon,
     goTo: goTo,
-    geocode: geocode,
+    geocodeStringAndPan: geocodeStringAndPan,
     getSize: getSize,
     gridSystem: gridSystem,
     panMapToGeocodedLocation: panMapToGeocodedLocation,
@@ -14334,6 +14353,9 @@ BlurredLocation = function BlurredLocation(options) {
     truncateToPrecision: truncateToPrecision,
     map: options.map,
     updateRectangleOnPan: updateRectangleOnPan,
+    setZoomByPrecision: setZoomByPrecision,
+    disableCenterShade: disableCenterShade,
+    enableCenterShade: enableCenterShade,
   }
 }
 
@@ -14346,16 +14368,17 @@ module.exports = function gridSystem(options) {
   options.cellSize = options.cellSize || { rows:100, cols:100 };
 
   require('leaflet-graticule');
+  // require('../Leaflet.Graticule.js');
 
   options.graticuleOptions = options.graticuleOptions || {
                  showLabel: true,
                  zoomInterval: [
                    {start: 2, end: 2, interval: 100},
-                   {start: 3, end: 5, interval: 10},
-                   {start: 6, end: 8, interval: 1},
+                   {start: 2, end: 5, interval: 10},
+                   {start: 5, end: 9, interval: 1},
                    {start: 9, end: 12, interval: 0.1},
-                   {start: 13, end: 15, interval: 0.01},
-                   {start: 16, end: 20, interval: 0.001},
+                   {start: 12, end: 15, interval: 0.01},
+                   {start: 15, end: 20, interval: 0.001},
                  ],
                  opacity: 1,
                  color: '#ff0000',
@@ -14368,6 +14391,7 @@ module.exports = function gridSystem(options) {
                             }
                             if (lat < 0) {
                                 lat = lat * -1;
+                                lat = lat.toString();
                                 if(lat.indexOf(".") != -1) lat = lat.split('.')[0] + '.' + lat.split('.')[1].slice(0,decimalPlacesAfterZero);
                                 return '' + lat + 'S';
                             }
@@ -14435,6 +14459,7 @@ module.exports = function Interface (options) {
 
     options.latId = options.latId || 'lat';
     options.lngId = options.lngId || 'lng';
+    options.selector = options.selector || 'geo_location'
 
     function panMapWhenInputsChange() {
       var lat = document.getElementById(options.latId);
@@ -14452,8 +14477,21 @@ module.exports = function Interface (options) {
 
   panMapWhenInputsChange();
 
+
+  options.onDrag = options.onDrag || function onDrag() {
+    function changeVal(result) {
+      if(result.results[0])
+        $("#location").val(result.results[0].formatted_address);
+    }
+    options.getPlacenameFromCoordinates(options.getLat(), options.getLon(), changeVal);
+  }
+
+
+  options.map.on('moveend', options.onDrag);
+
   return {
     panMapWhenInputsChange: panMapWhenInputsChange,
+    onDrag: options.onDrag,
   }
 
 }

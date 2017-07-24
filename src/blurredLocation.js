@@ -53,7 +53,6 @@ BlurredLocation = function BlurredLocation(options) {
     else
       return parseFloat(options.map.getCenter().lng);
   }
-
   function goTo(lat, lon, zoom) {
     options.map.setView([lat, lon], zoom);
   }
@@ -62,15 +61,19 @@ BlurredLocation = function BlurredLocation(options) {
     options.map.setZoom(zoom);
   }
 
-  function geocode(string) {
+  function geocodeStringAndPan(string, onComplete) {
     var url = "https://maps.googleapis.com/maps/api/geocode/json?address="+string.split(" ").join("+");
     var Blurred = $.ajax({
         async: false,
         url: url
     });
-    var geometry = Blurred.responseJSON.results[0].geometry.location;
-    options.map.setView([geometry.lat, geometry.lng],options.zoom);
-    return geometry;
+    onComplete = onComplete || function onComplete(geometry) {
+      $("#lat").val(geometry.lat);
+      $("#lng").val(geometry.lng);
+
+      options.map.setView([geometry.lat, geometry.lng],options.zoom);
+    }
+    onComplete(Blurred.responseJSON.results[0].geometry.location);
   }
 
   function getSize() {
@@ -84,7 +87,7 @@ BlurredLocation = function BlurredLocation(options) {
     autocomplete.addListener('place_changed', function() {
       setTimeout(function () {
         var str = input.value;
-        geocode(str);
+        geocodeStringAndPan(str);
       }, 10);
     });
   };
@@ -178,25 +181,41 @@ BlurredLocation = function BlurredLocation(options) {
   var rectangle;
 
   function drawCenterRectangle(bounds) {
-    if(rectangle) rectangle.remove()
+    if(rectangle) rectangle.remove();
     rectangle = L.rectangle(bounds, {color: "#ff0000", weight: 1}).addTo(options.map);
   }
 
   function updateRectangleOnPan() {
     var precision = getPrecision();
-    var interval = 1 / 10**precision;
-    var bounds = [[getLat(), getLon()], [getLat() + Math.sign(getLat())*interval, getLon() + Math.sign(getLon())*interval]];
+    var interval = Math.pow(10,-precision);
+    var bounds = [[getLat(), getLon()], [getLat() + (getLat()/Math.abs(getLat()))*interval, getLon() + (getLon()/Math.abs(getLon()))*interval]];
+
     drawCenterRectangle(bounds);
   }
 
-  updateRectangleOnPan();
-  options.map.on('moveend', updateRectangleOnPan);
+
+  function setZoomByPrecision(precision) {
+    var precisionTable = {'-2': 2, '-1': 3, '0':6, '1':10, '2':13, '3':16};
+    setZoom(precisionTable[precision]);
+  }
+
+  function enableCenterShade() {
+    updateRectangleOnPan();
+    options.map.on('moveend', updateRectangleOnPan);
+  }
+
+  function disableCenterShade() {
+    if(rectangle) rectangle.remove();
+    options.map.off('moveend',updateRectangleOnPan);
+  }
+
+  enableCenterShade();
 
   return {
     getLat: getLat,
     getLon: getLon,
     goTo: goTo,
-    geocode: geocode,
+    geocodeStringAndPan: geocodeStringAndPan,
     getSize: getSize,
     gridSystem: gridSystem,
     panMapToGeocodedLocation: panMapToGeocodedLocation,
@@ -215,6 +234,9 @@ BlurredLocation = function BlurredLocation(options) {
     truncateToPrecision: truncateToPrecision,
     map: options.map,
     updateRectangleOnPan: updateRectangleOnPan,
+    setZoomByPrecision: setZoomByPrecision,
+    disableCenterShade: disableCenterShade,
+    enableCenterShade: enableCenterShade,
   }
 }
 

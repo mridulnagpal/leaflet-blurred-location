@@ -4,16 +4,17 @@ module.exports = function gridSystem(options) {
   options.cellSize = options.cellSize || { rows:100, cols:100 };
 
   require('leaflet-graticule');
+  // require('../Leaflet.Graticule.js');
 
   options.graticuleOptions = options.graticuleOptions || {
                  showLabel: true,
                  zoomInterval: [
                    {start: 2, end: 2, interval: 100},
-                   {start: 3, end: 5, interval: 10},
-                   {start: 6, end: 8, interval: 1},
+                   {start: 2, end: 5, interval: 10},
+                   {start: 5, end: 9, interval: 1},
                    {start: 9, end: 12, interval: 0.1},
-                   {start: 13, end: 15, interval: 0.01},
-                   {start: 16, end: 20, interval: 0.001},
+                   {start: 12, end: 15, interval: 0.01},
+                   {start: 15, end: 20, interval: 0.001},
                  ],
                  opacity: 1,
                  color: '#ff0000',
@@ -26,6 +27,7 @@ module.exports = function gridSystem(options) {
                             }
                             if (lat < 0) {
                                 lat = lat * -1;
+                                lat = lat.toString();
                                 if(lat.indexOf(".") != -1) lat = lat.split('.')[0] + '.' + lat.split('.')[1].slice(0,decimalPlacesAfterZero);
                                 return '' + lat + 'S';
                             }
