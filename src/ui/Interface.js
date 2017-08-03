@@ -27,8 +27,23 @@ module.exports = function Interface (options) {
       if($("#"+options.selector).val())
         $("#location").val($("#"+options.selector).val());
 
-      else if(result.results[0])
-        $("#location").val(result.results[0].formatted_address);
+      else if(result.results[0]) {
+        if(options.getPrecision() == 0) {
+          //Iterates through all locations available, and checks if the type of location is country
+          for (i in result.results) {
+            if(result.results[i].types.indexOf("country") != -1) {
+              //If the type of location is a country assign it to thr input box value
+              $("#location").val(result.results[i].formatted_address);
+            }
+          }
+        }
+        else {
+          $("#location").val(result.results[0].formatted_address);
+        }
+      }
+      else {
+        $("#location").val("Location unavailable");
+      }
     }
 
       options.getPlacenameFromCoordinates(options.getLat(), options.getLon(), changeVal);
@@ -37,9 +52,25 @@ module.exports = function Interface (options) {
 
   options.map.on('moveend', options.onDrag);
 
+  function updateLatLngInputListeners() {
+    $("#"+options.latId).val(options.getLat());
+    $("#"+options.lngId).val(options.getLon());
+  };
+
+  function enableLatLngInputTruncate() {
+    options.map.on('moveend', updateLatLngInputListeners);
+  };
+
+  function disableLatLngInputTruncate() {
+    options.map.off('moveend', updateLatLngInputListeners);
+  };
+
   return {
     panMapWhenInputsChange: panMapWhenInputsChange,
     onDrag: options.onDrag,
+    updateLatLngInputListeners: updateLatLngInputListeners,
+    disableLatLngInputTruncate: disableLatLngInputTruncate,
+    enableLatLngInputTruncate: enableLatLngInputTruncate,
   }
 
 }
