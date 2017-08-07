@@ -1,6 +1,5 @@
 BlurredLocation = function BlurredLocation(options) {
 
-  var L = require('leaflet');
   var blurredLocation = this;
   var blurred = true;
   require('leaflet-graticule');
@@ -34,11 +33,12 @@ BlurredLocation = function BlurredLocation(options) {
   InterfaceOptions.getLat = getLat;
   InterfaceOptions.getLon = getLon;
   InterfaceOptions.map = options.map;
-  InterfaceOptions.getPrecision = getPrecision;
 
   Interface = options.Interface(InterfaceOptions);
 
   var tileLayer = L.tileLayer("https://a.tiles.mapbox.com/v3/jywarren.map-lmrwb2em/{z}/{x}/{y}.png").addTo(options.map);
+  options.map.options.scrollWheelZoom="center";
+
   // options.map.setView([options.location.lat, options.location.lon], options.zoom);
 
   function getLat() {
@@ -168,10 +168,14 @@ BlurredLocation = function BlurredLocation(options) {
       if(boolean && !blurred) {
         gridSystem.addGrid();
         blurred = true;
+        enableCenterShade();
+        disableCenterMarker();
       }
       else if(!boolean) {
         blurred = false;
         gridSystem.removeGrid();
+        disableCenterShade();
+        enableCenterMarker();
       }
   }
 
@@ -210,38 +214,31 @@ BlurredLocation = function BlurredLocation(options) {
     options.map.off('moveend',updateRectangleOnPan);
   }
 
+  var marker = L.marker([getFullLat(), getFullLon()]);
+
+  function updateMarker() {
+    if(marker) marker.remove();
+    marker = L.marker([getFullLat(), getFullLon()]).addTo(options.map);
+  }
+
+  function enableCenterMarker() {
+    updateMarker();
+    options.map.on('move', updateMarker);
+  }
+
+  function disableCenterMarker() {
+    marker.remove();
+    options.map.off('moveend',updateMarker);
+  }
+
   enableCenterShade();
-
-  function getBlurredPlacename(lat, lng, onResponse) {
-      $.ajax({
-      url:"https://maps.googleapis.com/maps/api/geocode/json?latlng="+lat+","+lng ,
-      success: function(result) {
-        onResponse(result);
-      }
-    });
-  }
-
-  function getCountry(result) {
-    if(result) {
-      for (i in result.results) {
-        if(result.results[i].types.indexOf("country") != -1) {
-          $("#location").val(result.results[i].formatted_address);
-        }
-      }
-    }
-  }
-
-  function test(lat, lng) {
-    getBlurredPlacename(lat, lng, getCountry);
-  }
-
-  options.map.on('moveend', test);
-
 
   return {
     getLat: getLat,
     getLon: getLon,
-    goTo: goTo,    getSize: getSize,
+    goTo: goTo,
+    geocodeStringAndPan: geocodeStringAndPan,
+    getSize: getSize,
     gridSystem: gridSystem,
     panMapToGeocodedLocation: panMapToGeocodedLocation,
     getPlacenameFromCoordinates: getPlacenameFromCoordinates,
@@ -262,8 +259,8 @@ BlurredLocation = function BlurredLocation(options) {
     setZoomByPrecision: setZoomByPrecision,
     disableCenterShade: disableCenterShade,
     enableCenterShade: enableCenterShade,
-    test: test,
-    geocodeStringAndPan: geocodeStringAndPan,
+    disableCenterMarker: disableCenterMarker,
+    enableCenterMarker: enableCenterMarker,
   }
 }
 
