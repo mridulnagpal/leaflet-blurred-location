@@ -19,17 +19,13 @@ module.exports = function gridSystem(options) {
                  opacity: 1,
                  color: '#ff0000',
                  latFormatTickLabel: function(lat) {
-                            var decimalPlacesAfterZero = 0;
                             lat = lat.toString();
-                            decimalPlacesAfterZero = this.getDecimalPlacesAfterZero();
-                            return this.getLabeledCoordinate(lat, "lat", decimalPlacesAfterZero);
+                            return this.getLabeledCoordinate(lat, "lat", this.getDecimalPlacesAfterZero());
                           },
 
                 lngFormatTickLabel: function(lng) {
-                           var decimalPlacesAfterZero = 0;
                            lng = lng.toString();
-                           decimalPlacesAfterZero = this.getDecimalPlacesAfterZero(); 
-                           return this.getLabeledCoordinate(lng, "lng", decimalPlacesAfterZero);
+                           return this.getLabeledCoordinate(lng, "lng", this.getDecimalPlacesAfterZero());
                          },
 
                 getDecimalPlacesAfterZero: function() {
